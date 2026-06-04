@@ -1,15 +1,8 @@
 import config from '@config/index';
 import { weatherRepository } from '@repositories/weather.repository';
-import { forecastRepository } from '@repositories/forecast.repository';
 import redisClient from '@database/redis';
 import { ApiError } from '@utils/apiError';
 import logger from '@utils/logger';
-
-interface WeatherApiResponse {
-  current: any;
-  hourly?: any[];
-  daily?: any[];
-}
 
 export class WeatherService {
   private readonly CACHE_TTL = 300;
@@ -77,19 +70,27 @@ export class WeatherService {
     const url = `${config.weather.openMeteoBaseUrl}/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index&temperature_unit=${tempUnit}&wind_speed_unit=${speedUnit}`;
 
     try {
-      const response = await fetch(url);
-      const data = await response.json();
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(id);
+      const data: any = await response.json();
 
       if (!response.ok) {
         throw new Error(data.reason || 'Open-Meteo API error');
       }
 
-      return this.mapOpenMeteoCurrent(data, lat, lon, units);
+      return this.mapOpenMeteoCurrent(data, lat, lon);
     } catch (error: any) {
       logger.error('Open-Meteo API error, falling back to OpenWeatherMap', { error: error.message });
 
-      if (config.weather.openweathermapApiKey) {
+      if (config.weather.openweathermapApiKey && config.weather.openweathermapApiKey !== 'your-openweathermap-api-key') {
         return this.fetchFromOpenWeatherMap(lat, lon, units);
+      }
+
+      if (config.nodeEnv === 'development') {
+        logger.warn('Weather APIs unavailable, returning mock data');
+        return this.getMockCurrentWeather(lat, lon, units);
       }
 
       throw ApiError.internal('Failed to fetch weather data');
@@ -100,7 +101,7 @@ export class WeatherService {
     const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${config.weather.openweathermapApiKey}&units=${units}`;
 
     const response = await fetch(url);
-    const data = await response.json();
+    const data: any = await response.json();
 
     if (!response.ok) {
       throw new Error(data.message || 'OpenWeatherMap API error');
@@ -133,7 +134,7 @@ export class WeatherService {
     };
   }
 
-  private mapOpenMeteoCurrent(data: any, lat: number, lon: number, units: 'metric' | 'imperial'): any {
+  private mapOpenMeteoCurrent(data: any, lat: number, lon: number): any {
     const current = data.current;
     const weatherCodes: Record<number, { main: string; desc: string; icon: string }> = {
       0: { main: 'Clear', desc: 'Clear sky', icon: '01d' },
@@ -193,6 +194,66 @@ export class WeatherService {
     };
   }
 
+  private getMockCurrentWeather(lat: number, lon: number, units: 'metric' | 'imperial'): any {
+    const celsius = units === 'metric';
+    const seed = Math.abs(lat * 10 + lon * 7);
+    const tempBase = (seed % 35) + (celsius ? -2 : 28);
+    const temp = Math.round((tempBase + 10) * 10) / 10;
+    const speed = Math.round((seed % 40) * 10) / 10;
+    const humidity = Math.round(40 + (seed % 50));
+    const pressure = Math.round(990 + (seed % 40));
+    const clouds = Math.round(seed % 100);
+    const uvIndex = Math.round((seed % 110) * 10) / 10;
+    const precip = Math.round((seed % 100) * 10) / 10;
+    const weatherOptions = [
+      { main: 'Clear', desc: 'Clear sky', icon: '01d' },
+      { main: 'Clouds', desc: 'Partly cloudy', icon: '02d' },
+      { main: 'Clouds', desc: 'Overcast', icon: '04d' },
+      { main: 'Rain', desc: 'Light rain', icon: '10d' },
+      { main: 'Drizzle', desc: 'Light drizzle', icon: '09d' },
+    ];
+    const weather = weatherOptions[Math.floor(seed % weatherOptions.length)];
+    const locations: Record<string, string> = {
+      '51.5074_-0.1278': 'London',
+      '48.8566_2.3522': 'Paris',
+      '40.7128_-74.0060': 'New York',
+      '35.6762_139.6503': 'Tokyo',
+      '37.7749_-122.4194': 'San Francisco',
+      '52.5200_13.4050': 'Berlin',
+      '41.9028_12.4964': 'Rome',
+      '55.7558_37.6173': 'Moscow',
+      '39.9042_116.4074': 'Beijing',
+      '19.0760_72.8777': 'Mumbai',
+    };
+    const key = `${lat}_${lon}`;
+    const locationName = locations[key] || `Location (${lat.toFixed(2)}, ${lon.toFixed(2)})`;
+    return {
+      latitude: lat,
+      longitude: lon,
+      locationName,
+      temperature: temp,
+      feelsLike: Math.round((temp - 2 - (seed % 5)) * 10) / 10,
+      tempMin: Math.round((temp - 3 - (seed % 4)) * 10) / 10,
+      tempMax: Math.round((temp + 2 + (seed % 4)) * 10) / 10,
+      pressure,
+      humidity,
+      windSpeed: speed,
+      windDeg: Math.round(seed % 360),
+      windGust: Math.round((speed * 1.5) * 10) / 10,
+      clouds,
+      visibility: 5000 + Math.round(seed % 5000),
+      weatherMain: weather.main,
+      weatherDesc: weather.desc,
+      weatherIcon: weather.icon,
+      uvIndex,
+      precipitation: precip > 5 ? precip : 0,
+      sunrise: new Date(),
+      sunset: new Date(),
+      fetchedFrom: 'Mock',
+      fetchedAt: new Date(),
+    };
+  }
+
   private async fetchHourlyFromOpenMeteo(lat: number, lon: number, hours: number, units: 'metric' | 'imperial'): Promise<any> {
     const tempUnit = units === 'imperial' ? 'fahrenheit' : 'celsius';
     const speedUnit = units === 'imperial' ? 'mph' : 'kmh';
@@ -200,7 +261,7 @@ export class WeatherService {
     const url = `${config.weather.openMeteoBaseUrl}/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,relative_humidity_2m&forecast_hours=${hours}&temperature_unit=${tempUnit}&wind_speed_unit=${speedUnit}`;
 
     const response = await fetch(url);
-    const data = await response.json();
+    const data: any = await response.json();
 
     if (!response.ok) {
       throw new Error(data.reason || 'Open-Meteo API error');
@@ -223,7 +284,7 @@ export class WeatherService {
     const url = `${config.weather.openMeteoBaseUrl}/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_sum,precipitation_probability_max,weather_code,wind_speed_10m_max,wind_gusts_10m_max,uv_index_max,sunrise,sunset&forecast_days=${days}&temperature_unit=${tempUnit}&wind_speed_unit=${speedUnit}`;
 
     const response = await fetch(url);
-    const data = await response.json();
+    const data: any = await response.json();
 
     if (!response.ok) {
       throw new Error(data.reason || 'Open-Meteo API error');
@@ -245,7 +306,7 @@ export class WeatherService {
     const url = `${config.weather.openMeteoBaseUrl}/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${endDate}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max&temperature_unit=${tempUnit}`;
 
     const response = await fetch(url);
-    const data = await response.json();
+    const data: any = await response.json();
 
     if (!response.ok) {
       throw new Error(data.reason || 'Open-Meteo API error');

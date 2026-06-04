@@ -19,6 +19,7 @@ const config: Config = {
     '^@database/(.*)$': '<rootDir>/src/database/$1',
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',
     '^@types/(.*)$': '<rootDir>/src/types/$1',
+    '^@docs/(.*)$': '<rootDir>/src/docs/$1',
   },
   collectCoverageFrom: [
     'src/**/*.ts',

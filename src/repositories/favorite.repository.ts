@@ -38,6 +38,24 @@ export class FavoriteRepository {
       },
     });
   }
+
+  async findInactiveByCoordinates(userId: string, lat: number, lon: number) {
+    return prisma.favoriteLocation.findFirst({
+      where: {
+        userId,
+        latitude: { gte: lat - 0.01, lte: lat + 0.01 },
+        longitude: { gte: lon - 0.01, lte: lon + 0.01 },
+        isActive: false,
+      },
+    });
+  }
+
+  async reactivate(id: string, data: { locationName?: string; label?: string }) {
+    return prisma.favoriteLocation.update({
+      where: { id },
+      data: { isActive: true, ...data },
+    });
+  }
 }
 
 export const favoriteRepository = new FavoriteRepository();

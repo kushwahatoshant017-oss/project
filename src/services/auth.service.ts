@@ -1,10 +1,9 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 import config from '@config/index';
 import { userRepository } from '@repositories/user.repository';
 import { sessionRepository } from '@repositories/session.repository';
-import { JwtPayload } from '@types/index';
+import { JwtPayload } from '@typings/index';
 import { ApiError } from '@utils/apiError';
 import { generateRandomToken, hashToken } from '@utils/encryption';
 import { emailService } from './email.service';
@@ -14,6 +13,7 @@ import prisma from '@database/client';
 
 export class AuthService {
   async register(email: string, password: string, firstName?: string, lastName?: string) {
+    email = email.toLowerCase().trim();
     const existingUser = await userRepository.findByEmail(email);
     if (existingUser) {
       throw ApiError.conflict('Email already registered');
@@ -54,6 +54,7 @@ export class AuthService {
   }
 
   async login(email: string, password: string, ipAddress?: string, userAgent?: string) {
+    email = email.toLowerCase().trim();
     const user = await userRepository.findByEmail(email);
     if (!user) {
       throw ApiError.unauthorized('Invalid email or password');
@@ -146,6 +147,7 @@ export class AuthService {
   }
 
   async forgotPassword(email: string) {
+    email = email.toLowerCase().trim();
     const user = await userRepository.findByEmail(email);
     if (!user) {
       return;
@@ -219,6 +221,10 @@ export class AuthService {
       }
     }
 
+    if (!user) {
+      throw ApiError.internal('Failed to create or find user');
+    }
+
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     return { user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role, avatarUrl: user.avatarUrl }, ...tokens };
   }
@@ -234,7 +240,7 @@ export class AuthService {
     const accessToken = jwt.sign(payload, config.jwt.secret, {
       expiresIn: config.jwt.expiresIn,
       issuer: config.jwt.issuer,
-    });
+    } as jwt.SignOptions);
 
     const refreshToken = generateRandomToken(48);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);

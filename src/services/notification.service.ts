@@ -1,5 +1,5 @@
 import { notificationRepository } from '@repositories/notification.repository';
-import { NotificationPayload } from '@types/index';
+import { NotificationPayload } from '@typings/index';
 
 class NotificationService {
   async send(payload: NotificationPayload) {

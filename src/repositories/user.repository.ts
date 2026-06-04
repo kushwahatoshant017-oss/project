@@ -11,7 +11,7 @@ export class UserRepository extends BaseRepository<any, UserCreateInput, UserUpd
   }
 
   async findByEmail(email: string) {
-    return prisma.user.findUnique({ where: { email } });
+    return prisma.user.findFirst({ where: { email, deletedAt: null } });
   }
 
   async findByGoogleId(googleId: string) {

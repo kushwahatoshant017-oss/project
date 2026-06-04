@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { favoriteService } from '@services/favorite.service';
 import { sendSuccess, sendCreated } from '@utils/response';
 import { asyncHandler } from '@middleware/errorHandler';
-import { AuthRequest } from '@types/index';
+import { AuthRequest } from '@typings/index';
 
 export const createFavorite = asyncHandler(async (req: AuthRequest, res: Response) => {
   const result = await favoriteService.create(req.user!.userId, req.body);
@@ -15,6 +15,6 @@ export const getFavorites = asyncHandler(async (req: AuthRequest, res: Response)
 });
 
 export const deleteFavorite = asyncHandler(async (req: AuthRequest, res: Response) => {
-  await favoriteService.delete(req.params.id, req.user!.userId);
+  await favoriteService.delete(String(req.params.id), req.user!.userId);
   sendSuccess(res, null, 'Location removed from favorites');
 });

@@ -33,7 +33,8 @@
       "@dto/*": ["src/dto/*"],
       "@database/*": ["src/database/*"],
       "@utils/*": ["src/utils/*"],
-      "@types/*": ["src/types/*"]
+      "@docs/*": ["src/docs/*"],
+      "@typings/*": ["src/types/*"]
     }
   },
   "include": ["src/**/*", "prisma/**/*", "tests/**/*"],

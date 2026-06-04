@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import config from '@config/index';
-import { AuthRequest, JwtPayload } from '@types/index';
+import { AuthRequest, JwtPayload } from '@typings/index';
 import { ApiError } from '@utils/apiError';
 import prisma from '@database/client';
 import logger from '@utils/logger';

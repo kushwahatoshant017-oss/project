@@ -1,15 +1,39 @@
-jest.mock('@database/redis');
+const mockGet = jest.fn();
+const mockSet = jest.fn();
+
+jest.mock('@database/redis', () => ({
+  __esModule: true,
+  default: {
+    get: mockGet,
+    set: mockSet,
+    del: jest.fn(),
+    delPattern: jest.fn(),
+    exists: jest.fn(),
+    expire: jest.fn(),
+    ttl: jest.fn(),
+    disconnect: jest.fn(),
+  },
+  redisClient: {
+    get: mockGet,
+    set: mockSet,
+    del: jest.fn(),
+    delPattern: jest.fn(),
+    exists: jest.fn(),
+    expire: jest.fn(),
+    ttl: jest.fn(),
+    disconnect: jest.fn(),
+  },
+}));
+
 jest.mock('@repositories/weather.repository');
-jest.mock('@repositories/forecast.repository');
 jest.mock('@utils/logger');
 
 describe('WeatherService', () => {
   let weatherService: any;
 
   beforeAll(() => {
-    jest.isolateModules(() => {
-      weatherService = require('@services/weather.service').weatherService;
-    });
+    const mod = require('@services/weather.service');
+    weatherService = mod.weatherService;
   });
 
   beforeEach(() => {
@@ -18,22 +42,20 @@ describe('WeatherService', () => {
 
   describe('getCurrentWeather', () => {
     it('should return cached data if available', async () => {
-      const redisClient = require('@database/redis').default;
       const cachedData = { temperature: 25, humidity: 60 };
-      redisClient.get.mockResolvedValue(cachedData);
+      mockGet.mockResolvedValue(cachedData);
 
       const result = await weatherService.getCurrentWeather(40.7128, -74.006);
 
       expect(result).toEqual(cachedData);
-      expect(redisClient.get).toHaveBeenCalledWith('weather:current:40.7128:-74.006:metric');
+      expect(mockGet).toHaveBeenCalledWith('weather:current:40.7128:-74.006:metric');
     });
 
     it('should fetch and cache if no cached data', async () => {
-      const redisClient = require('@database/redis').default;
       const weatherRepository = require('@repositories/weather.repository').weatherRepository;
 
-      redisClient.get.mockResolvedValue(null);
-      redisClient.set.mockResolvedValue(true);
+      mockGet.mockResolvedValue(null);
+      mockSet.mockResolvedValue(true);
       weatherRepository.create.mockResolvedValue({});
 
       global.fetch = jest.fn().mockResolvedValue({
@@ -58,7 +80,7 @@ describe('WeatherService', () => {
 
       expect(result).toHaveProperty('temperature');
       expect(result).toHaveProperty('humidity');
-      expect(redisClient.set).toHaveBeenCalled();
+      expect(mockSet).toHaveBeenCalled();
       expect(weatherRepository.create).toHaveBeenCalled();
     });
   });

@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { userRepository } from '@repositories/user.repository';
 import { sendSuccess } from '@utils/response';
 import { asyncHandler } from '@middleware/errorHandler';
-import { AuthRequest } from '@types/index';
+import { AuthRequest } from '@typings/index';
 
 export const getProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
   const user = await userRepository.findById(req.user!.userId);

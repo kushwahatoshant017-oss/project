@@ -1,5 +1,7 @@
 import { Request } from 'express';
-import { Role, Permission } from '@prisma/client';
+import { Role } from '@prisma/client';
+
+export type Permission = 'READ_USER' | 'WRITE_USER' | 'DELETE_USER' | 'READ_WEATHER' | 'READ_AQI' | 'READ_FORECAST' | 'WRITE_FAVORITES' | 'DELETE_FAVORITES' | 'READ_ALERTS' | 'WRITE_ALERTS' | 'DELETE_ALERTS' | 'READ_NOTIFICATIONS' | 'WRITE_NOTIFICATIONS' | 'MANAGE_ROLES' | 'MANAGE_PERMISSIONS' | 'VIEW_AUDIT_LOGS' | 'ADMIN_ACCESS';
 
 export interface JwtPayload {
   userId: string;

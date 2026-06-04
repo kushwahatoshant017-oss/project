@@ -11,8 +11,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.9.1",
-
+    "@hookform/resolvers": "^3.10.0",
+    "@next/swc-win32-x64-msvc": "^16.2.7",
     "@radix-ui/react-accordion": "^1.2.1",
     "@radix-ui/react-alert-dialog": "^1.1.2",
     "@radix-ui/react-avatar": "^1.1.1",
@@ -39,7 +39,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
-    "framer-motion": "^11.11.17",
+    "framer-motion": "^11.18.2",
     "i18next": "^24.0.5",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.460.0",
@@ -48,7 +48,7 @@
     "react": "^19.0.0-rc-02c0e824-20241028",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^19.0.0-rc-02c0e824-20241028",
-    "react-hook-form": "^7.53.2",
+    "react-hook-form": "^7.77.0",
     "react-i18next": "^15.1.1",
     "react-leaflet": "^4.2.1",
     "react-redux": "^9.1.2",

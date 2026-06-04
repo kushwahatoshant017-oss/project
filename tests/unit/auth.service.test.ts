@@ -1,20 +1,29 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 
 jest.mock('@repositories/user.repository');
 jest.mock('@repositories/session.repository');
-jest.mock('@database/client');
 jest.mock('@utils/logger');
 jest.mock('@services/email.service');
 jest.mock('@services/audit.service');
+
+const mockPrisma = {
+  emailVerificationToken: { create: jest.fn().mockResolvedValue({}) },
+  passwordResetToken: { create: jest.fn().mockResolvedValue({}) },
+  session: { create: jest.fn().mockResolvedValue({}) },
+};
+
+jest.mock('@database/client', () => ({
+  __esModule: true,
+  default: mockPrisma,
+  prisma: mockPrisma,
+}));
 
 describe('AuthService', () => {
   let authService: any;
 
   beforeAll(async () => {
-    jest.isolateModules(() => {
-      authService = require('@services/auth.service').authService;
-    });
+    const mod = require('@services/auth.service');
+    authService = mod.authService;
   });
 
   beforeEach(() => {

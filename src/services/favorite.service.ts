@@ -8,6 +8,14 @@ export class FavoriteService {
       throw ApiError.conflict('Location already in favorites');
     }
 
+    const existingInactive = await favoriteRepository.findInactiveByCoordinates(userId, data.latitude, data.longitude);
+    if (existingInactive) {
+      return favoriteRepository.reactivate(existingInactive.id, {
+        locationName: data.locationName || existingInactive.locationName || '',
+        label: data.label ?? existingInactive.label ?? undefined,
+      });
+    }
+
     return favoriteRepository.create({
       userId,
       latitude: data.latitude,

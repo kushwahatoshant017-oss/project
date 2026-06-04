@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { ApiResponse } from '@types/index';
+import { ApiResponse } from '@typings/index';
 
 export function sendSuccess<T>(
   res: Response,

@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import prisma from '@database/client';
 import logger from '@utils/logger';
 
@@ -10,7 +11,7 @@ class AuditService {
           action,
           entity,
           entityId,
-          metadata: metadata || {},
+          metadata: (metadata || {}) as Prisma.InputJsonValue,
           ipAddress,
           userAgent,
         },

@@ -1,7 +1,6 @@
 import config from '@config/index';
 import { aqiRepository } from '@repositories/aqi.repository';
 import redisClient from '@database/redis';
-import { ApiError } from '@utils/apiError';
 import logger from '@utils/logger';
 
 export class AQIService {
@@ -40,7 +39,7 @@ export class AQIService {
     const url = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${config.weather.openweathermapApiKey}`;
 
     const response = await fetch(url);
-    const data = await response.json();
+    const data: any = await response.json();
 
     if (!response.ok) {
       throw new Error(data.message || 'OpenWeatherMap AQI API error');
@@ -68,29 +67,60 @@ export class AQIService {
   private async fetchFromOpenMeteo(lat: number, lon: number): Promise<any> {
     const url = `${config.weather.openMeteoBaseUrl}/air-quality?latitude=${lat}&longitude=${lon}&current=european_aqi,us_aqi,pm2_5,pm10,nitrogen_dioxide,sulphur_dioxide,ozone,carbon_monoxide`;
 
-    const response = await fetch(url);
-    const data = await response.json();
+    try {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(id);
+      const data: any = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.reason || 'Open-Meteo AQI API error');
+      if (!response.ok) {
+        throw new Error(data.reason || 'Open-Meteo AQI API error');
+      }
+
+      const current = data.current;
+
+      const aqiValue = current.european_aqi || current.us_aqi || 0;
+      const aqiCategory = this.categorizeAQI(aqiValue);
+
+      return {
+        latitude: lat,
+        longitude: lon,
+        aqi: aqiCategory,
+        pm25: current.pm2_5,
+        pm10: current.pm10,
+        o3: current.ozone,
+        no2: current.nitrogen_dioxide,
+        so2: current.sulphur_dioxide,
+        co: current.carbon_monoxide,
+        fetchedFrom: 'Open-Meteo',
+        fetchedAt: new Date(),
+      };
+    } catch (error: any) {
+      logger.error('Open-Meteo AQI API error, returning mock data', { error: error.message, lat, lon });
+
+      if (config.nodeEnv === 'development') {
+        return this.getMockAQI(lat, lon);
+      }
+
+      throw error;
     }
+  }
 
-    const current = data.current;
-
-    const aqiValue = current.european_aqi || current.us_aqi || 0;
-    const aqiCategory = this.categorizeAQI(aqiValue);
-
+  private getMockAQI(lat: number, lon: number): any {
+    const seed = Math.abs(lat * 10 + lon * 7);
+    const aqi = Math.max(1, Math.min(5, Math.round(1 + (seed % 40) / 10)));
     return {
       latitude: lat,
       longitude: lon,
-      aqi: aqiCategory,
-      pm25: current.pm2_5,
-      pm10: current.pm10,
-      o3: current.ozone,
-      no2: current.nitrogen_dioxide,
-      so2: current.sulphur_dioxide,
-      co: current.carbon_monoxide,
-      fetchedFrom: 'Open-Meteo',
+      aqi,
+      pm25: Math.round((5 + (seed % 80)) * 10) / 10,
+      pm10: Math.round((10 + (seed % 120)) * 10) / 10,
+      o3: Math.round((20 + (seed % 100)) * 10) / 10,
+      no2: Math.round((5 + (seed % 60)) * 10) / 10,
+      so2: Math.round((1 + (seed % 20)) * 10) / 10,
+      co: Math.round((200 + (seed % 600)) * 10) / 10,
+      fetchedFrom: 'Mock',
       fetchedAt: new Date(),
     };
   }

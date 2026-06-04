@@ -1,4 +1,4 @@
-import { PaginationParams } from '@types/index';
+import { PaginationParams } from '@typings/index';
 import { v4 as uuidv4 } from 'uuid';
 
 export function sanitizeString(input: string): string {

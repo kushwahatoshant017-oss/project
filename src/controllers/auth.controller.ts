@@ -1,9 +1,9 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { authService } from '@services/auth.service';
 import { sendSuccess, sendCreated } from '@utils/response';
 import { asyncHandler } from '@middleware/errorHandler';
 import { extractIpAddress, extractUserAgent } from '@utils/helpers';
-import { AuthRequest } from '@types/index';
+import { AuthRequest } from '@typings/index';
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const result = await authService.register(

@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import prisma from '@database/client';
 
 export abstract class BaseRepository<T, CreateDto, UpdateDto = Partial<CreateDto>> {
@@ -22,7 +22,7 @@ export abstract class BaseRepository<T, CreateDto, UpdateDto = Partial<CreateDto
     const record = await this.findById(id);
     if (!record) {
       const { ApiError } = require('@utils/apiError');
-      throw ApiError.notFound(errorMessage || `${this.modelName} not found`);
+      throw ApiError.notFound(errorMessage || `${String(this.modelName)} not found`);
     }
     return record;
   }

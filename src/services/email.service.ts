@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import config from '@config/index';
-import { EmailOptions } from '@types/index';
+import { EmailOptions } from '@typings/index';
 import logger from '@utils/logger';
 
 class EmailService {
