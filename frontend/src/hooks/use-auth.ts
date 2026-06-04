@@ -55,7 +55,7 @@ export function useLogout() {
     },
     onSettled: () => {
       dispatch(logoutAction())
-      router.push("/login")
+      router.push("/")
     },
   })
 }
