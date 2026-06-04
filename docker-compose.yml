@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weathersphere-api
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://weathersphere:weathersphere123@postgres:5432/weathersphere
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - OPENWEATHERMAP_API_KEY=${OPENWEATHERMAP_API_KEY}
+      - WEATHERAPI_KEY=${WEATHERAPI_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - weathersphere-network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: weathersphere-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=weathersphere
+      - POSTGRES_PASSWORD=weathersphere123
+      - POSTGRES_DB=weathersphere
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weathersphere"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - weathersphere-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: weathersphere-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - weathersphere-network
+
+volumes:
+  postgres-data:
+  redis-data:
+
+networks:
+  weathersphere-network:
+    driver: bridge

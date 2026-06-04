@@ -1,0 +1,320 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum Permission {
+  READ_USER
+  WRITE_USER
+  DELETE_USER
+  READ_WEATHER
+  READ_AQI
+  READ_FORECAST
+  WRITE_FAVORITES
+  DELETE_FAVORITES
+  READ_ALERTS
+  WRITE_ALERTS
+  DELETE_ALERTS
+  READ_NOTIFICATIONS
+  WRITE_NOTIFICATIONS
+  MANAGE_ROLES
+  MANAGE_PERMISSIONS
+  VIEW_AUDIT_LOGS
+  ADMIN_ACCESS
+}
+
+enum AlertType {
+  TEMPERATURE
+  PRECIPITATION
+  WIND
+  UV_INDEX
+  AIR_QUALITY
+  STORM
+  CUSTOM
+}
+
+enum AlertCondition {
+  ABOVE
+  BELOW
+  EQUAL
+  CHANGES_BY
+}
+
+enum NotificationChannel {
+  EMAIL
+  PUSH
+  IN_APP
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+enum UnitSystem {
+  METRIC
+  IMPERIAL
+}
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  passwordHash   String?
+  firstName      String?
+  lastName      String?
+  avatarUrl      String?
+  role           Role      @default(USER)
+  isEmailVerified Boolean  @default(false)
+  isActive       Boolean   @default(true)
+  googleId       String?   @unique
+  unitSystem     UnitSystem @default(METRIC)
+  refreshToken   String?
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  sessions          Session[]
+  favoriteLocations FavoriteLocation[]
+  alerts            Alert[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([googleId])
+  @@index([isActive])
+  @@index([deletedAt])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  isRevoked    Boolean  @default(false)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([refreshToken])
+  @@index([expiresAt])
+}
+
+model WeatherData {
+  id              String   @id @default(uuid())
+  latitude        Float
+  longitude       Float
+  locationName    String?
+  temperature     Float
+  feelsLike       Float
+  tempMin         Float?
+  tempMax         Float?
+  pressure        Int
+  humidity        Int
+  windSpeed       Float
+  windDeg         Int
+  windGust        Float?
+  clouds          Int
+  visibility      Int
+  weatherMain     String
+  weatherDesc     String
+  weatherIcon     String
+  rain1h          Float?
+  snow1h          Float?
+  uvIndex         Float?
+  precipitation   Float?
+  sunrise         DateTime
+  sunset          DateTime
+  fetchedFrom     String
+  rawResponse     Json?
+  fetchedAt       DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([latitude, longitude])
+  @@index([fetchedAt])
+  @@index([locationName])
+  @@index([weatherMain])
+}
+
+model Forecast {
+  id              String   @id @default(uuid())
+  latitude        Float
+  longitude       Float
+  locationName    String?
+  forecastType    String   // hourly, daily
+  forecastTime    DateTime
+  temperature     Float
+  feelsLike       Float?
+  tempMin         Float?
+  tempMax         Float?
+  pressure        Int?
+  humidity        Int?
+  windSpeed       Float
+  windDeg         Int?
+  windGust        Float?
+  clouds          Int?
+  visibility      Int?
+  weatherMain     String
+  weatherDesc     String
+  weatherIcon     String
+  precipitation   Float?
+  precipitationProb Float?
+  uvIndex         Float?
+  sunrise         DateTime?
+  sunset          DateTime?
+  fetchedFrom     String
+  rawResponse     Json?
+  fetchedAt       DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([latitude, longitude])
+  @@index([forecastType])
+  @@index([forecastTime])
+  @@index([fetchedAt])
+}
+
+model AQIData {
+  id                String   @id @default(uuid())
+  latitude          Float
+  longitude         Float
+  locationName      String?
+  aqi               Int      // 1-5 (Good to Very Poor)
+  pm25              Float?
+  pm10              Float?
+  o3                Float?
+  no2               Float?
+  so2               Float?
+  co                Float?
+  nh3               Float?
+  predominantPollen String?
+  fetchedFrom       String
+  rawResponse       Json?
+  fetchedAt         DateTime @default(now())
+  createdAt         DateTime @default(now())
+
+  @@index([latitude, longitude])
+  @@index([aqi])
+  @@index([fetchedAt])
+}
+
+model FavoriteLocation {
+  id         String   @id @default(uuid())
+  userId     String
+  latitude   Float
+  longitude  Float
+  locationName String?
+  label      String?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, latitude, longitude])
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+model Alert {
+  id              String          @id @default(uuid())
+  userId          String
+  locationLat     Float
+  locationLon     Float
+  locationName    String?
+  alertType       AlertType
+  condition       AlertCondition
+  thresholdValue  Float
+  unitSystem      UnitSystem      @default(METRIC)
+  isActive        Boolean         @default(true)
+  lastTriggeredAt DateTime?
+  cooldownMinutes Int             @default(60)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@index([alertType])
+}
+
+model Notification {
+  id          String             @id @default(uuid())
+  userId      String
+  title       String
+  message     String
+  channel     NotificationChannel @default(IN_APP)
+  status      NotificationStatus  @default(PENDING)
+  metadata    Json?
+  readAt      DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([entity])
+  @@index([createdAt])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
