@@ -17,11 +17,6 @@ services:
         fromDatabase:
           name: weathersphere-db
           property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: redis
-          name: weathersphere-redis
-          property: connectionString
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
@@ -68,7 +63,3 @@ databases:
     plan: starter
     postgresMajorVersion: 16
 
-redis:
-  - name: weathersphere-redis
-    plan: starter
-    maxmemoryPolicy: allkeys-lru
