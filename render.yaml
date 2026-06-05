@@ -56,10 +56,4 @@ services:
     healthCheckPath: /health
     autoDeploy: true
 
-databases:
-  - name: weathersphere-db
-    databaseName: weathersphere
-    user: weathersphere
-    plan: starter
-    postgresMajorVersion: 16
 
