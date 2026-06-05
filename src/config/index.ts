@@ -71,7 +71,7 @@ interface Config {
 const config: Config = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '4000', 10),
-  host: process.env.HOST || 'localhost',
+  host: process.env.HOST || '0.0.0.0',
   database: {
     url: process.env.DATABASE_URL || 'postgresql://weathersphere:weathersphere123@localhost:5432/weathersphere',
     host: process.env.DATABASE_HOST || 'localhost',
@@ -121,7 +121,7 @@ const config: Config = {
     origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   },
   logging: {
-    level: process.env.LOG_LEVEL || 'debug',
+    level: process.env.LOG_LEVEL || 'info',
     filePath: process.env.LOG_FILE_PATH || 'logs/app.log',
   },
   swagger: {
@@ -132,5 +132,19 @@ const config: Config = {
     key: process.env.ENCRYPTION_KEY || 'default-encryption-key-32chars',
   },
 };
+
+export function validateRequiredConfig(): void {
+  const requiredVars: { key: string; value: string | undefined; name: string }[] = [
+    { key: 'DATABASE_URL', value: process.env.DATABASE_URL, name: 'DATABASE_URL' },
+    { key: 'JWT_SECRET', value: process.env.JWT_SECRET, name: 'JWT_SECRET' },
+    { key: 'JWT_REFRESH_SECRET', value: process.env.JWT_REFRESH_SECRET, name: 'JWT_REFRESH_SECRET' },
+  ];
+
+  const missing = requiredVars.filter(v => !v.value || v.value.startsWith('default-'));
+  if (missing.length > 0) {
+    const names = missing.map(v => v.name).join(', ');
+    throw new Error(`Missing or invalid required environment variables: ${names}`);
+  }
+}
 
 export default config;

@@ -7,10 +7,8 @@ export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     log: [
-      { level: 'query', emit: 'event' },
-      { level: 'error', emit: 'stdout' },
-      { level: 'info', emit: 'stdout' },
       { level: 'warn', emit: 'stdout' },
+      { level: 'error', emit: 'stdout' },
     ],
   });
 
@@ -18,20 +16,20 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
 
-prisma.$on('query' as never, (e: { query: string; params: string; duration: number }) => {
-  logger.debug(`Query: ${e.query}`, {
-    params: e.params,
-    duration: `${e.duration}ms`,
-  });
-});
-
-export async function connectDatabase(): Promise<void> {
-  try {
-    await prisma.$connect();
-    logger.info('Database connected successfully');
-  } catch (error) {
-    logger.error('Failed to connect to database', { error });
-    throw error;
+export async function connectDatabase(retries = 5, delay = 3000): Promise<void> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await prisma.$connect();
+      logger.info('Database connected successfully');
+      return;
+    } catch (error) {
+      logger.error(`Database connection attempt ${attempt}/${retries} failed`, { error });
+      if (attempt === retries) {
+        throw error;
+      }
+      logger.info(`Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
   }
 }
 

@@ -14,9 +14,12 @@ import logger from '@utils/logger';
 
 const app: Express = express();
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: config.nodeEnv === 'production' ? undefined : false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(cors({
-  origin: config.cors.origin,
+  origin: config.cors.origin.split(',').map(o => o.trim()),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -29,6 +32,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 if (config.nodeEnv !== 'test') {
   app.use(morgan('combined', {
     stream: { write: (message: string) => logger.http(message.trim()) },
+    skip: (_req, res) => config.nodeEnv === 'production' && res.statusCode < 400,
   }));
 }
 
@@ -43,13 +47,16 @@ if (config.swagger.enabled) {
   logger.info(`Swagger docs available at ${config.swagger.path}`);
 }
 
-app.get('/health', (_req, res) => {
-  res.status(200).json({
+app.get('/health', async (_req, res) => {
+  const healthCheck = {
     success: true,
     message: 'WeatherSphere API is running',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-  });
+    environment: config.nodeEnv,
+    memoryUsage: process.memoryUsage().heapUsed,
+  };
+  res.status(200).json(healthCheck);
 });
 
 app.use('/api', routes);
